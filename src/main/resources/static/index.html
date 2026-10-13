@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoLens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f17;
+    --bg-soft: #121826;
+    --line: #1f2737;
+    --text: #e6ebf5;
+    --muted: #8b95aa;
+    --accent: #5eead4;
+    --accent-2: #818cf8;
+    --warn: #fb7185;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px 120px;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* faint graph-paper background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+    opacity: .5;
+    pointer-events: none;
+  }
+
+  main {
+    position: relative;
+    width: 100%;
+    max-width: 760px;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: clamp(3rem, 10vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 36px;
+  }
+
+  h1 .lens {
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* the interactive sentence */
+  .sentence {
+    font-size: clamp(1.15rem, 3.2vw, 1.6rem);
+    font-weight: 500;
+    color: var(--muted);
+    line-height: 1.5;
+    min-height: 3em;
+  }
+
+  .typed {
+    color: var(--text);
+    font-weight: 700;
+    border-right: 2px solid var(--accent);
+    padding-right: 3px;
+    animation: blink 1s step-end infinite;
+    white-space: nowrap;
+  }
+
+  @keyframes blink { 50% { border-color: transparent; } }
+
+  /* plain-English explanation */
+  .explain {
+    margin: 22px auto 0;
+    max-width: 560px;
+    font-size: 1.05rem;
+    color: var(--muted);
+    line-height: 1.6;
+    min-height: 3.4em;
+    transition: opacity .35s ease;
+  }
+
+  /* little demo strip */
+  .demo {
+    margin: 26px auto 0;
+    max-width: 640px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: .85rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+  }
+
+  .chip {
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: #1a2233;
+    color: var(--muted);
+    opacity: 0;
+    transform: translateY(6px);
+    animation: pop .4s ease forwards;
+  }
+
+  .chip.hot { color: var(--warn); }
+  .chip.ok  { color: var(--accent); }
+
+  .arrow {
+    color: var(--accent);
+    opacity: 0;
+    animation: pop .4s ease forwards;
+  }
+
+  @keyframes pop {
+    to { opacity: 1; transform: none; }
+  }
+
+  /* topic picker */
+  .topics {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .topics button {
+    font: inherit;
+    font-size: .85rem;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+
+  .topics button:hover { color: var(--text); border-color: var(--muted); }
+
+  .topics button[aria-pressed="true"] {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Try it button */
+  .try {
+    position: fixed;
+    right: 28px;
+    bottom: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 26px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    color: #0b0f17;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    box-shadow: 0 10px 30px -8px rgba(94, 234, 212, .45);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+
+  .try:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px -8px rgba(94, 234, 212, .6);
+  }
+
+  .try span { transition: transform .2s ease; }
+  .try:hover span { transform: translateX(4px); }
+
+  .try:focus-visible, .topics button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 520px) {
+    .try { right: 16px; bottom: 16px; padding: 13px 22px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .typed { animation: none; border-right: none; }
+    .chip, .arrow { animation: none; opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <h1>Repo<span class="lens">Lens</span></h1>
+
+  <p class="sentence">
+    Paste a GitHub link and RepoLens shows you<br>
+    <span class="typed" id="typed" aria-live="polite"></span>
+  </p>
+
+  <p class="explain" id="explain"></p>
+
+  <div class="demo" id="demo" aria-hidden="true"></div>
+
+  <div class="topics" id="topics" role="group" aria-label="What RepoLens does"></div>
+</main>
+
+<!-- Change href to your analyze page route -->
+<a class="try" href="/checkoutrepo">Try it <span>→</span></a>
+
+<script>
+  const topics = [
+    {
+      label: "Map",
+      phrase: "how the code is built.",
+      explain: "It draws a map of every class and how they connect, so you can see the whole project at a glance, including loops that shouldn't be there.",
+      demo: [["OrderController"], ["OrderService"], ["OrderRepository"], ["Order", "ok"]]
+    },
+    {
+      label: "Request path",
+      phrase: "where a request goes.",
+      explain: "Pick any API endpoint and watch its path light up through the code, one step at a time.",
+      demo: [["POST /orders", "ok"], ["create()"], ["place()"], ["charge()"], ["save()"]]
+    },
+    {
+      label: "Risky code",
+      phrase: "where the risky code is.",
+      explain: "It finds files that are complicated, change all the time, or that only one person has ever worked on. That's where bugs tend to hide.",
+      demo: [["PaymentService.java", "hot"], ["412 lines", "hot"], ["changed 60×", "hot"], ["1 author", "hot"]],
+      plain: true
+    },
+    {
+      label: "Reading order",
+      phrase: "where to start reading.",
+      explain: "New to a project? It gives you a reading order: the basic building blocks first, then the code built on top of them.",
+      demo: [["1. Money.java"], ["2. Order.java"], ["3. OrderService.java"], ["4. OrderController.java"]]
+    },
+    {
+      label: "Ask questions",
+      phrase: "answers you can check.",
+      explain: "Ask a question in plain English and get an answer that links to the exact lines of code. Every link is checked, so nothing is made up.",
+      demo: [["\"Where are passwords hashed?\""], ["SecurityConfig.java:42"], ["✓ verified", "ok"]]
+    }
+  ];
+
+  const typedEl = document.getElementById("typed");
+  const explainEl = document.getElementById("explain");
+  const demoEl = document.getElementById("demo");
+  const topicsEl = document.getElementById("topics");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let current = 0;
+  let typeTimer = null;
+  let cycleTimer = null;
+  let paused = false;
+
+  // build topic buttons
+  const buttons = topics.map((t, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = t.label;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => { show(i); restartCycle(); });
+    topicsEl.appendChild(b);
+    return b;
+  });
+
+  function typePhrase(text) {
+    clearTimeout(typeTimer);
+    if (reduceMotion) { typedEl.textContent = text; return; }
+    typedEl.textContent = "";
+    let i = 0;
+    (function step() {
+      typedEl.textContent = text.slice(0, ++i);
+      if (i < text.length) typeTimer = setTimeout(step, 38);
+    })();
+  }
+
+  function renderDemo(t) {
+    demoEl.innerHTML = "";
+    let delay = 0;
+    t.demo.forEach(([text, kind], idx) => {
+      if (idx > 0) {
+        const a = document.createElement("span");
+        a.className = "arrow";
+        a.textContent = t.plain ? "·" : "→";
+        a.style.animationDelay = delay + "ms";
+        demoEl.appendChild(a);
+        delay += 120;
+      }
+      const c = document.createElement("span");
+      c.className = "chip" + (kind ? " " + kind : "");
+      c.textContent = text;
+      c.style.animationDelay = delay + "ms";
+      demoEl.appendChild(c);
+      delay += 220;
+    });
+  }
+
+  function show(i) {
+    current = i;
+    const t = topics[i];
+    buttons.forEach((b, j) => b.setAttribute("aria-pressed", String(j === i)));
+    typePhrase(t.phrase);
+    explainEl.style.opacity = 0;
+    setTimeout(() => {
+      explainEl.textContent = t.explain;
+      explainEl.style.opacity = 1;
+    }, 200);
+    renderDemo(t);
+  }
+
+  function restartCycle() {
+    clearInterval(cycleTimer);
+    cycleTimer = setInterval(() => {
+      if (!paused) show((current + 1) % topics.length);
+    }, 5500);
+  }
+
+  // pause auto-rotation while the user is hovering
+  document.querySelector("main").addEventListener("mouseenter", () => paused = true);
+  document.querySelector("main").addEventListener("mouseleave", () => paused = false);
+
+  show(0);
+  restartCycle();
+</script>
+</body>
+</html>

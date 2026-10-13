@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoLens – Analyze a Repo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f17;
+    --bg-soft: #121826;
+    --bg-input: #0f1420;
+    --line: #1f2737;
+    --text: #e6ebf5;
+    --muted: #8b95aa;
+    --accent: #5eead4;
+    --accent-2: #818cf8;
+    --warn: #fb7185;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 48px 16px 80px;
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; }
+
+  a.home {
+    display: inline-block;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    text-decoration: none;
+    margin-bottom: 32px;
+  }
+  a.home span {
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+  .sub { color: var(--muted); margin-bottom: 28px; }
+
+  .card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px;
+  }
+
+  .label {
+    display: block;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* public / private choice */
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .choice input { position: absolute; opacity: 0; pointer-events: none; }
+
+  .choice label {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  .choice label strong { display: block; margin-bottom: 4px; }
+  .choice label small { color: var(--muted); font-size: .82rem; }
+  .choice label:hover { border-color: var(--muted); }
+
+  .choice input:checked + label {
+    border-color: var(--accent);
+    background: rgba(94, 234, 212, .07);
+  }
+  .choice input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* dropdown section that opens after a choice */
+  .details {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .35s ease;
+  }
+  .details.open { grid-template-rows: 1fr; }
+  .details > div { overflow: hidden; }
+  .details-inner { padding-top: 24px; }
+
+  .field { margin-bottom: 18px; }
+  .field.hidden { display: none; }
+
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: "JetBrains Mono", monospace;
+    font-size: .9rem;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+
+  .hint { font-size: .8rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .hint a { color: var(--accent); }
+
+  .token-row { position: relative; }
+  .token-row input { padding-right: 70px; }
+  .toggle {
+    position: absolute;
+    right: 8px; top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: .8rem;
+    cursor: pointer;
+    padding: 6px;
+  }
+  .toggle:hover { color: var(--text); }
+
+  .message { font-size: .85rem; margin-bottom: 14px; min-height: 1.2em; line-height: 1.5; }
+  .message.error { color: var(--warn); }
+  .message.success { color: var(--accent); }
+
+  .submit {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    color: #0b0f17;
+    font: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity .2s ease;
+  }
+  .submit:hover { opacity: .9; }
+  .submit:disabled { opacity: .5; cursor: wait; }
+
+  /* recently analyzed */
+  h2 { font-size: 1.1rem; margin: 44px 0 14px; }
+
+  .recent { list-style: none; display: grid; gap: 10px; }
+
+  .recent a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color .2s ease;
+  }
+  .recent a:hover { border-color: var(--accent); }
+
+  .repo-name { font-family: "JetBrains Mono", monospace; font-size: .9rem; word-break: break-all; }
+  .repo-meta { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+
+  .grade {
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: .85rem;
+    color: var(--accent);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 9px;
+  }
+
+  .empty { color: var(--muted); font-size: .9rem; }
+
+  @media (max-width: 480px) {
+    .choices { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="home" href="/">Repo<span>Lens</span></a>
+
+  <h1>Analyze a repository</h1>
+  <p class="sub">Enter a GitHub repository to analyze its code quality.</p>
+
+  <!-- Clicking Analyze or pressing Enter both call AnalyzeRepo() -->
+  <form class="card" id="form" novalidate onsubmit="event.preventDefault(); AnalyzeRepo();">
+    <span class="label">Repository type</span>
+    <div class="choices">
+      <div class="choice">
+        <input type="radio" name="visibility" id="public" value="public">
+        <label for="public">
+          <strong>Public</strong>
+          <small>Anyone can see it on GitHub</small>
+        </label>
+      </div>
+      <div class="choice">
+        <input type="radio" name="visibility" id="private" value="private">
+        <label for="private">
+          <strong>Private</strong>
+          <small>Needs an access token</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="details" id="details">
+      <div>
+        <div class="details-inner">
+
+          <div class="field">
+            <label class="label" for="repo">GitHub repository</label>
+            <input type="text" id="repo" name="repo" placeholder="https://github.com/owner/repo  or  owner/repo" autocomplete="off" spellcheck="false">
+          </div>
+
+          <div class="field hidden" id="tokenField">
+            <label class="label" for="token">Fine-grained personal access token</label>
+            <div class="token-row">
+              <input type="password" id="token" name="token" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
+              <button type="button" class="toggle" id="toggleToken">Show</button>
+            </div>
+            <p class="hint">
+              Give it read-only access to <b>Contents</b> and <b>Metadata</b> for this repo only.
+              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a token</a>.
+              It's used for this analysis only and never stored.
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label" for="branch">Branch</label>
+            <input type="text" id="branch" name="branch" value="main" autocomplete="off" spellcheck="false">
+          </div>
+
+          <p class="message" id="message" role="alert"></p>
+          <button type="submit" class="submit" id="submit">Analyze</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <h2>Recently analyzed</h2>
+  <ul class="recent" id="recent">
+    <li class="empty">No recent analyses. maintain a list of recently analyzed repositories and append them here. Possibly append with httpssessions</li>
+    <li class="empty">The repo is cloned temporarily into files. But the files are deleted after the analysis is complete and the results are stored in the database.</li>
+
+  </ul>
+
+</div>
+
+<script src="/js/analyzeRepo.js"></script>
+</body>
+</html>
