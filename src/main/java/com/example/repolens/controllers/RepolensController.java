@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.HttpClientErrorException;
 
+import com.example.repolens.service.CloneException;
+import com.example.repolens.service.CloneRepoService;
 import com.example.repolens.service.GithubRepoService;
 
 
@@ -23,9 +25,11 @@ public class RepolensController {
             Pattern.compile("^[A-Za-z0-9-_.]+/[A-Za-z0-9-_.]+$");
 
     private final GithubRepoService githubRepoService;
+    private final CloneRepoService cloneRepoService;
 
-    RepolensController(GithubRepoService githubRepoService) {
+    RepolensController(GithubRepoService githubRepoService, CloneRepoService cloneRepoService) {
         this.githubRepoService = githubRepoService;
+        this.cloneRepoService = cloneRepoService;
     }
 
     // The JSON the frontend sends
@@ -100,16 +104,25 @@ public class RepolensController {
                     + (language.isEmpty() ? "an unknown language" : language) + ".");
         }
 
-        // To be returned
-        return ResponseEntity.ok(Map.of(
-                "repo", ownerRepo,
-                "branch", branch,
-                "size", Objects.requireNonNullElse(repoInfo.get("size"), 0),
-                "language", Objects.toString(repoInfo.get("language"), "unknown"),
-                "private", Objects.requireNonNullElse(repoInfo.get("private"), false)
-        ));
+        // Clone, read some basic info, and delete the folder automatically
+        try (CloneRepoService.ClonedRepo cloned = cloneRepoService.cloneRepo(ownerRepo, branch, token)) {
+
+            // Later: run JavaParser and JGit history analysis on cloned.path() here
+
+            return ResponseEntity.ok(Map.of(
+                    "repo", ownerRepo,
+                    "branch", cloned.branch(),
+                    "commitSha", cloned.commitSha(),
+                    "javaFiles", cloned.javaFileCount(),
+                    "size", sizeKb,
+                    "language", language
+            ));
+        } catch (CloneException e) {
+            return error(422, e.getMessage());
+        }
     }
 
+    
     // Turns "https://github.com/owner/repo/tree/main" and "owner/repo.git", etc. into "owner/repo"
     private String RepoFormat(String input) {
         if (input == null) return null;
