@@ -104,10 +104,16 @@ public class RepolensController {
                     + (language.isEmpty() ? "an unknown language" : language) + ".");
         }
 
-        // Clone, read some basic info, and delete the folder automatically
+        // HANDLES CLONING OF THE REPO AND RETURN TEST RESPONSES
         try (CloneRepoService.ClonedRepo cloned = cloneRepoService.cloneRepo(ownerRepo, branch, token)) {
 
             // Later: run JavaParser and JGit history analysis on cloned.path() here
+
+            /*
+            javapareser is a library that can parse Java source code and generate an abstract syntax tree (AST) representation of the code. It can be used to analyze the structure of the code, extract information about classes, methods, fields, and other elements, and perform various transformations or analyses on the code.
+            we pass the path of the cloned repo
+            → used to build the class and method dependency graphs
+            */
 
             return ResponseEntity.ok(Map.of(
                     "repo", ownerRepo,

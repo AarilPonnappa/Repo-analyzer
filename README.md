@@ -17,7 +17,7 @@ RepoLens supports **Java only (Maven or Gradle projects)**, so it can go deep an
 ## How it's different
 
 - **GitHub Insights** answers *"how active is this repo?"* It counts commits and contributors but never opens the code. RepoLens answers *"how is this code built, and where is it fragile?"*
-- **SonarQube** reports code problems, but doesn't explain the architecture or answer questions.
+- **SonarQube** reports code problems, but doesn't explain the architecture or answer questions. RepoLens finds design problems and risky code (bad structure, overly complex code, the places bugs are likely to appear). It does not prove that a specific line has a bug
 - **AI "chat with your repo" tools** can invent class names and behaviour.
 
 In RepoLens, **Java does the actual analysis** (parsing, graph algorithms, git history), and Gemini only explains results that have already been verified. Every claim links to its evidence.
