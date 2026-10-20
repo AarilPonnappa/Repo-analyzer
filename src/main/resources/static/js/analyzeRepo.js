@@ -22,6 +22,15 @@ document.getElementById("toggleToken").addEventListener("click", e => {
     e.target.textContent = hidden ? "Hide" : "Show";
 });
 
+// /checkoutrepo?repo=owner/repo (from a share link for a repo that wasn't analyzed yet) fills in the form
+const presetRepo = new URLSearchParams(location.search).get("repo");
+if (presetRepo) {
+    const publicRadio = document.getElementById("public");
+    publicRadio.checked = true;
+    publicRadio.dispatchEvent(new Event("change"));
+    form.elements.repo.value = presetRepo;
+}
+
 // Turn "https://github.com/owner/repo/tree/main" or "owner/repo.git" into "owner/repo"
 function parseRepo(value) {
     const v = value.trim()
@@ -34,6 +43,12 @@ function parseRepo(value) {
     const repo = parts[1].replace(/\.git$/, "");
     const valid = /^[A-Za-z0-9-_.]+$/;
     return valid.test(owner) && valid.test(repo) ? `${owner}/${repo}` : null;
+}
+
+// A URL like .../tree/develop also tells us the branch
+function branchFromUrl(value) {
+    const m = value.trim().match(/github\.com\/[^/]+\/[^/]+\/tree\/([^?#]+)/);
+    return m ? decodeURIComponent(m[1]).replace(/\/+$/, "") : "";
 }
 
 // type is "error" or "success"
@@ -55,7 +70,8 @@ async function AnalyzeRepo() {
     const repoChoice = selected ? selected.value : null;
 
     const repo = parseRepo(form.elements.repo.value);
-    const branch = form.elements.branch.value.trim() || "main";
+    // Empty means "the repo's default branch"; the server looks it up
+    const branch = form.elements.branch.value.trim() || branchFromUrl(form.elements.repo.value);
     const token = form.elements.token.value.trim();
 
     // Check the inputs before calling the backend
@@ -95,62 +111,72 @@ async function AnalyzeRepo() {
             throw new Error(resultData.error || "Failed to analyze repository.");
         }
 
-        console.log(resultData);
-        showMessage(
-            `Found ${resultData.repo} (${resultData.language}, ${resultData.size} KB) on branch ${resultData.branch}.`,
-            "success"
-        );
+        showMessage(resultData.cached ? "Already analyzed. Opening the report…" : "Started. Opening the live progress…", "success");
 
-        // Once the backend returns a job id, replace the message above with:
-        // window.location.href = `/result?id=${encodeURIComponent(resultData.id)}`;
+        // The analysis runs in the background; the result page follows it live.
+        // Private repos get a key that's needed to open their results.
+        let url = `/result?id=${encodeURIComponent(resultData.id)}`;
+        if (resultData.key) url += `&key=${encodeURIComponent(resultData.key)}`;
+        window.location.href = url;
     } catch (error) {
         console.error(error);
         showMessage(error.message);
-    } finally {
         setLoading(false);
     }
 }
 
-// Recently analyzed repos
-// function renderRecent(list) {
-//     const ul = document.getElementById("recent");
-//     ul.innerHTML = "";
-//     if (!list.length) {
-//         ul.innerHTML = '<li class="empty">No recent analyses.</li>';
-//         return;
-//     }
-//     list.forEach(r => {
-//         const li = document.createElement("li");
-//         const a = document.createElement("a");
-//         a.href = `/result?id=${encodeURIComponent(r.id)}`;
+// Recently analyzed public repos
+function timeAgo(iso) {
+    if (!iso) return "";
+    const s = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (s < 60) return "just now";
+    if (s < 3600) return `${Math.round(s / 60)} min ago`;
+    if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+    return `${Math.round(s / 86400)} d ago`;
+}
 
-//         const left = document.createElement("div");
-//         const name = document.createElement("div");
-//         name.className = "repo-name";
-//         name.textContent = r.repo;
-//         const meta = document.createElement("div");
-//         meta.className = "repo-meta";
-//         meta.textContent = `${r.branch} · ${r.analyzedAt}`;
-//         left.append(name, meta);
+function renderRecent(list) {
+    const ul = document.getElementById("recent");
+    ul.innerHTML = "";
+    if (!list.length) {
+        const li = document.createElement("li");
+        li.className = "empty";
+        li.textContent = "No repos analyzed yet. Try spring-projects/spring-petclinic.";
+        ul.appendChild(li);
+        return;
+    }
+    list.forEach(r => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = `/result?id=${encodeURIComponent(r.id)}`;
 
-//         const grade = document.createElement("span");
-//         grade.className = "grade";
-//         grade.textContent = r.grade;
+        const left = document.createElement("div");
+        const name = document.createElement("div");
+        name.className = "repo-name";
+        name.textContent = r.repo;
+        const meta = document.createElement("div");
+        meta.className = "repo-meta";
+        meta.textContent = `${r.branch} · ${timeAgo(r.analyzedAt)}`;
+        left.append(name, meta);
 
-//         a.append(left, grade);
-//         li.appendChild(a);
-//         ul.appendChild(li);
-//     });
-//}
+        const grade = document.createElement("span");
+        grade.className = "grade";
+        grade.textContent = r.grade || "–";
 
-// async function loadRecent() {
-//     try {
-//         const res = await fetch("/api/analyses/recent");
-//         if (!res.ok) return;          // endpoint doesn't exist yet, keep the default text
-//         renderRecent(await res.json());
-//     } catch {
-//         // keep the default text
-//     }
-// }
+        a.append(left, grade);
+        li.appendChild(a);
+        ul.appendChild(li);
+    });
+}
 
-// loadRecent();
+async function loadRecent() {
+    try {
+        const res = await fetch("/api/analyses/recent");
+        if (!res.ok) return;
+        renderRecent(await res.json());
+    } catch {
+        // keep the default text
+    }
+}
+
+loadRecent();
