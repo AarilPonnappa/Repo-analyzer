@@ -99,12 +99,3 @@ Each analysis runs as a **background job** that moves through stages, with live 
 | Frontend | HTML, CSS, JavaScript, **Cytoscape.js** (graph visualization), Server-Sent Events |
 | Testing | **JUnit 5**, **WireMock** (fake GitHub API), **Testcontainers** (real PostgreSQL) |
 | DevOps | **Docker**, **GitHub Actions** CI |
-
-## Roadmap
-
-- [ ] Clone and parse a repo, build the dependency graph, detect layers and cycles, interactive map, Gemini summary
-- [ ] Request-flow tracer and risk radar (complexity, hotspots, bus factor)
-- [ ] Fact-checked report and onboarding guide
-- [ ] Ask the repo (RAG with verified citations)
-- [ ] GitHub login, change tracking, badges and deployment
-- [ ] Stretch: pull-request bot that comments on new PRs with the modules they touch and any new cycles
