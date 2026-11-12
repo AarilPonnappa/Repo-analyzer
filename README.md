@@ -94,8 +94,6 @@ Each analysis runs as a **background job** that moves through stages, with live 
 | Code analysis | **JavaParser** (parsing Java source), **JGit** (git history) |
 | Algorithms | Tarjan's SCC (cycles), BFS / graph search (request flows), topological sort (reading order) |
 | Database | **PostgreSQL** with **pgvector**, **Flyway** migrations |
-| Caching | **Caffeine** |
 | GitHub | GitHub REST API with ETag caching and rate-limit backoff, GitHub OAuth login |
-| Frontend | HTML, CSS, JavaScript, **Cytoscape.js** (graph visualization), Server-Sent Events |
-| Testing | **JUnit 5**, **WireMock** (fake GitHub API), **Testcontainers** (real PostgreSQL) |
-| DevOps | **Docker**, **GitHub Actions** CI |
+| Frontend | HTML, CSS, JavaScript, Cytoscape.js |
+
