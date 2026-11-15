@@ -199,7 +199,7 @@
   <a class="home" href="/">Repo<span>Lens</span></a>
 
   <h1>Analyze a repository</h1>
-  <p class="sub">Enter a GitHub repository to analyze its code quality.</p>
+  <p class="sub">Java projects built with Maven or Gradle. Public repos need no account.</p>
 
   <!-- Clicking Analyze or pressing Enter both call AnalyzeRepo() -->
   <form class="card" id="form" novalidate onsubmit="event.preventDefault(); AnalyzeRepo();">
@@ -245,7 +245,7 @@
 
           <div class="field">
             <label class="label" for="branch">Branch</label>
-            <input type="text" id="branch" name="branch" value="main" autocomplete="off" spellcheck="false">
+            <input type="text" id="branch" name="branch" value="" placeholder="Leave empty for the default branch" autocomplete="off" spellcheck="false">
           </div>
 
           <p class="message" id="message" role="alert"></p>
@@ -257,9 +257,7 @@
 
   <h2>Recently analyzed</h2>
   <ul class="recent" id="recent">
-    <li class="empty">No recent analyses. maintain a list of recently analyzed repositories and append them here. Possibly append with httpssessions</li>
-    <li class="empty">The repo is cloned temporarily into files. But the files are deleted after the analysis is complete and the results are stored in the database.</li>
-
+    <li class="empty">No repos analyzed yet.</li>
   </ul>
 
 </div>

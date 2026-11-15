@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoLens – Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/result.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="home" href="/">Repo<span>Lens</span></a>
+    <div class="repo-head" id="repoHead">
+      <span class="repo-title" id="repoTitle">Loading…</span>
+      <span class="repo-meta" id="repoMeta"></span>
+    </div>
+    <div class="head-actions">
+      <span class="grade-pill" id="gradePill" hidden></span>
+      <button type="button" class="btn ghost" id="shareBtn" hidden>Copy link</button>
+      <a class="btn" href="/checkoutrepo">Analyze a repo</a>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- Shown while the analysis runs -->
+  <section class="progress card" id="progress" hidden>
+    <h1>Analyzing <span id="progressRepo"></span></h1>
+    <p class="muted" id="progressNote">This usually takes under a minute for a small repo. You can leave this page open; it updates by itself.</p>
+    <ol class="stages" id="stages"></ol>
+  </section>
+
+  <!-- Shown if the analysis failed or can't be found -->
+  <section class="failed card" id="failed" hidden>
+    <h1 id="failedTitle">The analysis failed</h1>
+    <p id="failedMessage"></p>
+    <a class="btn" href="/checkoutrepo">Try another repo</a>
+  </section>
+
+  <!-- Shown when the analysis is done -->
+  <div id="results" hidden>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" data-tab="map">Architecture</button>
+      <button role="tab" data-tab="requests">Requests</button>
+      <button role="tab" data-tab="risks">Risks</button>
+      <button role="tab" data-tab="files">Files</button>
+      <button role="tab" data-tab="ask">Ask</button>
+      <button role="tab" data-tab="history">History</button>
+    </nav>
+
+    <!-- Overview -->
+    <section class="tab-panel" id="tab-overview">
+      <div class="overview-grid">
+        <div class="col">
+          <div class="card grade-card">
+            <div class="grade-letter" id="gradeLetter"></div>
+            <div>
+              <div class="label">RepoLens grade</div>
+              <p class="muted small" id="gradeNote"></p>
+            </div>
+          </div>
+          <div class="stats" id="stats"></div>
+          <div class="card">
+            <h2>Classes per layer</h2>
+            <div class="layer-bar" id="layerBar"></div>
+            <ul class="layer-legend" id="layerLegend"></ul>
+          </div>
+          <div class="card">
+            <h2>README badge</h2>
+            <p class="muted small">Shows the latest grade and links to this report.</p>
+            <div class="badge-preview" id="badgePreview"></div>
+            <div class="copy-row">
+              <code id="badgeCode"></code>
+              <button type="button" class="btn ghost small" id="copyBadge">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="col wide">
+          <article class="card report" id="report">
+            <div class="report-head">
+              <h2>Report</h2>
+              <span class="source-tag" id="reportSource"></span>
+            </div>
+            <div id="reportBody"><p class="muted">Loading the report…</p></div>
+          </article>
+          <div class="card">
+            <h2>Reading order</h2>
+            <p class="muted small">New to this code? Read it in this order: each class only builds on classes above it.</p>
+            <ol class="reading" id="reading"></ol>
+            <button type="button" class="btn ghost small" id="readingMore" hidden>Show all</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture map -->
+    <section class="tab-panel" id="tab-map" hidden>
+      <div class="map-toolbar">
+        <div class="chips" id="layerFilters"></div>
+        <div class="map-controls">
+          <label class="check"><input type="checkbox" id="showTests"> Tests</label>
+          <label class="check"><input type="checkbox" id="onlyProblems"> Only problems</label>
+          <select id="layoutSelect" aria-label="Layout">
+            <option value="layers">Layered</option>
+            <option value="force">Force-directed</option>
+          </select>
+          <input type="search" id="classSearch" placeholder="Find a class" aria-label="Find a class">
+        </div>
+      </div>
+      <div class="map-wrap">
+        <div class="map-canvas card" id="cy" role="img" aria-label="Dependency graph"></div>
+        <aside class="map-side card" id="classPanel">
+          <p class="muted">Click a class to see what it depends on, what uses it and any problems found in it.</p>
+        </aside>
+      </div>
+      <div class="legend" id="mapLegend"></div>
+    </section>
+
+    <!-- Request flows -->
+    <section class="tab-panel" id="tab-requests" hidden>
+      <div class="split">
+        <div class="card list-card">
+          <input type="search" id="endpointSearch" placeholder="Filter endpoints" aria-label="Filter endpoints">
+          <ul class="endpoint-list" id="endpointList"></ul>
+        </div>
+        <div class="card" id="traceCard">
+          <p class="muted">Pick an endpoint to see the path a request takes through the code.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Risks -->
+    <section class="tab-panel" id="tab-risks" hidden>
+      <div class="card">
+        <h2>Hotspots</h2>
+        <p class="muted small">Classes that are complex <em>and</em> change often. Bugs tend to cluster here.</p>
+        <div class="table-wrap"><table class="table" id="hotspotTable"></table></div>
+      </div>
+      <div class="card">
+        <h2>Findings</h2>
+        <div class="chips" id="findingFilters"></div>
+        <ul class="findings" id="findingList"></ul>
+      </div>
+      <div class="card">
+        <h2>Most complex methods</h2>
+        <p class="muted small">Cyclomatic complexity counts the paths through a method. Above 15 is hard to test.</p>
+        <div class="table-wrap"><table class="table" id="complexTable"></table></div>
+      </div>
+    </section>
+
+    <!-- Files -->
+    <section class="tab-panel" id="tab-files" hidden>
+      <div class="card">
+        <input type="search" id="fileSearch" placeholder="Filter files" aria-label="Filter files">
+        <div class="tree" id="fileTree"></div>
+      </div>
+    </section>
+
+    <!-- Ask the repo -->
+    <section class="tab-panel" id="tab-ask" hidden>
+      <div class="card ask-card">
+        <h2>Ask the repo</h2>
+        <p class="muted small" id="askNote">Answers cite the exact lines they come from, and every class and method they name is checked against the code.</p>
+        <form id="askForm" class="ask-form">
+          <input type="text" id="askInput" maxlength="500" placeholder="e.g. How are new owners saved?" autocomplete="off" aria-label="Your question">
+          <button type="submit" class="btn" id="askBtn">Ask</button>
+        </form>
+        <div class="chips" id="askSuggestions"></div>
+      </div>
+      <div id="answers"></div>
+    </section>
+
+    <!-- History -->
+    <section class="tab-panel" id="tab-history" hidden>
+      <div class="card">
+        <h2>Over time</h2>
+        <p class="muted small">Every analysis of this repo is kept. Compare two to see what a change introduced or fixed.</p>
+        <div id="trendChart"></div>
+        <div class="table-wrap"><table class="table" id="historyTable"></table></div>
+      </div>
+      <div class="card" id="comparePanel" hidden></div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/js/vendor/cytoscape.min.js"></script>
+<script src="/js/result.js"></script>
+</body>
+</html>
