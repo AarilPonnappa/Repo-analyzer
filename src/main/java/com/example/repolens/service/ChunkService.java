@@ -38,8 +38,7 @@ public class ChunkService {
     private static final int MAX_CHUNK_CHARS = 6000;
     private static final int MAX_FILE_LINES = 200;
 
-    public record ChunkDraft(String kind, String className, String methodName, String filePath,
-                             int startLine, int endLine, String content) {
+    public record ChunkDraft(String kind, String className, String methodName, String filePath, int startLine, int endLine, String content) {       // kind is one of CLASS, METHOD, FILE. className and methodName are null for FILE chunks. filePath is relative to the repo root. startLine and endLine are the line numbers of the chunk. content is the actual source code of the chunk.
 
         // this function is called whenever the record is created, and it returns a string that contains the file path, class name, method name, and content of the chunk. This string is used to create an embedding for the chunk, which is a numerical representation of the chunk's content that can be used for machine learning tasks.
         
@@ -72,6 +71,8 @@ public class ChunkService {
         Map<String, List<String>> fileCache = new HashMap<>();
 
         // Project files first: they answer "what database / framework / version" questions
+        // We loop through the repoRoot which is the file path of the cloned repo and not the parsed code as the parsed code does not contain the project files. ParsedCode knows that a particular method starts at line 45 and finishes at line 62, but it doesn't contain the complete source code text of that method. repoRoot allows you to open the original Java file and extract those lines. 
+        // projectFiles returns 
         for (Path file : projectFiles(repoRoot)) {
             List<String> lines = readLines(file);
             if (lines.isEmpty()) continue;
@@ -154,6 +155,6 @@ public class ChunkService {
     private static String join(List<String> lines, int start, int end) {
         String text = String.join("\n", lines.subList(start - 1, end));
         return text.length() > MAX_CHUNK_CHARS ? text.substring(0, MAX_CHUNK_CHARS) + "\n// ..." : text;
-        
+
     }
 }
