@@ -276,8 +276,8 @@ public class CodeParserService {
 
         return new ClassInfo(
                 qualifiedName, simpleName, source.packageName(), kind, layer, source.path(),
-                type.getBegin().map(p -> p.line).orElse(0),
-                type.getEnd().map(p -> p.line).orElse(0),
+                type.getBegin().map(p -> p.line).orElse(0),                                 // p -> something is a lambda expression every item passing through the stream is assigned to p one at a time as the pipeline runs
+                type.getEnd().map(p -> p.line).orElse(0),                                   // p -> something is a lambda expression every item passing through the stream is assigned to p one at a time as the pipeline runs
                 annotations, superTypes, dependencies, methods, endpoints, test, entryPoint);
     }
 
@@ -339,7 +339,7 @@ public class CodeParserService {
             if (varType.isVarType()) {
                 // var x = new Foo(); -> Foo
                 target = var.getInitializer()
-                        .filter(Expression::isObjectCreationExpr)
+                        .filter(Expression::isObjectCreationExpr)                               // how .filer works is that every item passing through the stream is assigned to variable like p -> or e -> and then the lambda expression is evaluated for each item. The filer has a function that returns a boolean value, if the function returns true then the item is kept in the stream and if it returns false then the item is filtered out of the stream. In this case, the filter is checking if the initializer expression is an ObjectCreationExpr (i.e., a "new" expression). If it is, then it keeps it in the stream; otherwise, it filters it out.
                         .map(e -> resolver.resolveType(((ObjectCreationExpr) e).getType()))
                         .orElse(null);
             } else {
