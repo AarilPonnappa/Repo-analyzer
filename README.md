@@ -1,99 +1,42 @@
 # RepoLens
 
-**Understand any Java codebase in minutes.**
+## Abstract
 
-Paste a GitHub repository and RepoLens gives you:
+RepoLens is a web application that helps developers understand Java codebases. Users provide a GitHub repository URL, and the application analyzes the source code to generate an interactive architecture map, identify potentially risky code, trace API request flows, and answer questions about the codebase using AI with file and line references.
 
-- an interactive map of its architecture
-- its riskiest code
-- the path any API request takes through the code
-- a guided reading order
-- an assistant that answers questions about the code with links to the exact lines
+---
 
-Every AI claim is checked against the real code.
+## Background
 
-RepoLens supports **Java only (Maven or Gradle projects)**, so it can go deep and stay accurate rather than give shallow results for every language.
+Understanding an unfamiliar codebase can be time-consuming, especially for large projects with many interconnected classes and dependencies. Developers often need to manually explore files, trace method calls, and understand the overall architecture before making changes. Existing tools may provide code quality metrics or AI-generated explanations, but do not always combine architecture analysis with explanations grounded in the actual source code.
 
-## How it's different
+---
 
-- **GitHub Insights** answers *"how active is this repo?"* It counts commits and contributors but never opens the code. RepoLens answers *"how is this code built, and where is it fragile?"*
-- **SonarQube** reports code problems, but doesn't explain the architecture or answer questions. RepoLens finds design problems and risky code (bad structure, overly complex code, the places bugs are likely to appear). It does not prove that a specific line has a bug
-- **AI "chat with your repo" tools** can invent class names and behaviour.
+## Solution
 
-In RepoLens, **Java does the actual analysis** (parsing, graph algorithms, git history), and Gemini only explains results that have already been verified. Every claim links to its evidence.
+RepoLens simplifies codebase exploration by automatically analyzing Java repositories and presenting the results in an interactive interface. It uses JavaParser and graph algorithms to examine the source code, while Google Gemini provides explanations based on the analysis. RepoLens supports Java projects built with Maven or Gradle.
+
+---
 
 ## Features
 
-### Architecture map
-- Parses every Java file and builds a **dependency graph**: classes are nodes, and imports, method calls and injected dependencies are edges.
-- Detects **layers** (controllers, services, repositories, entities) from Spring annotations and groups the graph by package and layer.
-- Flags **layer violations**, such as a controller calling a repository directly and skipping the service.
-- Finds **circular dependencies** using Tarjan's strongly-connected-components algorithm and highlights them in red.
-- Interactive graph with zoom, filters and click-to-inspect.
+- **Architecture Map:** Visualizes classes, dependencies, and application layers in an interactive graph.
+- **Request Flow Tracing:** Shows how API requests move through controllers, services, and repositories.
+- **Risk Analysis:** Identifies complex methods, circular dependencies, frequently modified files, and potential test gaps.
+- **Onboarding Guide:** Suggests an order for reading files to help developers understand unfamiliar projects.
+- **Ask the Repo:** Allows users to ask questions about the codebase and receive AI-generated answers with file and line references.
+- **Analysis Reports:** Generates summaries of the codebase's architecture, complexity, and potential issues.
+- **Change Tracking:** Compares repository analyses to identify changes in code quality and structure.
 
-### Request-flow tracer
-- Lists every API endpoint (`@GetMapping`, `@PostMapping`, ...).
-- Pick one to see the path it takes through the code, found with **graph search** over the method call graph. For example: `OrderController.create()` → `OrderService.place()` → `PaymentClient.charge()` → `OrderRepository.save()`
-- Gemini explains the flow in plain English, based only on the traced path.
+---
 
-### Risk radar
-- **Complexity** per method (cyclomatic complexity), long methods and oversized classes.
-- **Hotspots:** files that are both complex *and* changed often according to git history. These are where bugs tend to cluster.
-- **Bus factor:** files only one person has ever edited.
-- **Test gaps:** important classes with no matching test class.
-- **Possibly dead code:** classes nothing depends on that aren't entry points.
+## How It Works and Tools Used
 
-### Onboarding guide
-- A **"read these files in this order"** path, computed with a topological sort of the dependency graph (foundations first), with a short explanation for each file.
-- A one-page overview of the architecture, the main modules and where to start.
+1. **Repository Retrieval:** JGit clones the GitHub repository, while the GitHub REST API retrieves repository information.
+2. **Source Code Analysis:** JavaParser examines Java files to extract classes, methods, dependencies, and API endpoints.
+3. **Graph Analysis:** Graph algorithms identify circular dependencies, trace request flows, and determine a recommended reading order.
+4. **Data Storage:** PostgreSQL stores analysis results, while pgvector stores code embeddings for similarity searches.
+5. **AI Integration:** Google Gemini generates explanations, reports, and answers to questions using information extracted from the source code.
+6. **Frontend:** HTML, CSS, JavaScript, and Cytoscape.js display the analysis results and interactive architecture graphs.
 
-### Ask the repo
-- Code is split into chunks by class and method, embedded with Gemini and stored in **PostgreSQL + pgvector**.
-- Questions like *"Where are passwords hashed?"* use **hybrid search** (vector similarity plus keyword matching).
-- Every answer cites clickable `file:line` references, and **every citation is verified** against the parsed codebase.
-
-### Fact-checked report
-- All numbers (counts, complexity, cycles, hotspots) are computed in Java. Gemini writes the summary from those facts only.
-- Any class, file or number that doesn't match the analysis is removed before the report is shown.
-
-### Change tracking
-- Every analysis is saved, so you can see trends over time (e.g. "complexity up 12% this month, 1 new cycle").
-- Compare two commits or branches to see what a change introduced.
-
-### Shareable results
-- A public report page for each analyzed repository.
-- A README badge (e.g. `RepoLens: B · 0 cycles`) that links to the report.
-
-## How it works
-
-```
-GitHub repo URL
-   → clone with JGit (current code + full commit history)
-   → parse Java sources with JavaParser
-   → build the class and method dependency graphs
-   → run analysis: layers, cycles, request flows, complexity, hotspots, bus factor
-   → save results to PostgreSQL, embed code chunks into pgvector
-   → Gemini writes explanations from verified facts → claims are checked → report
-```
-
-Each analysis runs as a **background job** that moves through stages, with live progress streamed to the browser using Server-Sent Events. Jobs survive restarts and retry on failure, and the same repository is never analyzed twice at the same time.
-
-**Safety:**
-- Analyzed code is only ever parsed, **never run**.
-- Repository size and file counts are capped.
-- Archive extraction is protected against path-traversal ("zip slip").
-- Webhooks are verified with HMAC signatures.
-- Private repositories need GitHub sign-in with read-only access.
-
-## APIs and tools
-
-| Area | Used |
-|---|---|
-| AI | **Google Gemini API** (text generation and embeddings) |
-| Backend | Java 21, **Spring Boot** (Web MVC, Data JPA, Security), Maven |
-| Code analysis | **JavaParser** (parsing Java source), **JGit** (git history) |
-| Algorithms | Tarjan's SCC (cycles), BFS / graph search (request flows), topological sort (reading order) |
-| Database | **PostgreSQL** with **pgvector**, **Flyway** migrations |
-| GitHub | GitHub REST API with ETag caching and rate-limit backoff, GitHub OAuth login |
-| Frontend | HTML, CSS, JavaScript, Cytoscape.js |
-
+**Technologies Used:** Java,
