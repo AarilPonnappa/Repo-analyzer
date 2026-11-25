@@ -39,4 +39,4 @@ RepoLens simplifies codebase exploration by automatically analyzing Java reposit
 5. **AI Integration:** Google Gemini generates explanations, reports, and answers to questions using information extracted from the source code.
 6. **Frontend:** HTML, CSS, JavaScript, and Cytoscape.js display the analysis results and interactive architecture graphs.
 
-**Technologies Used:** Java,
+**Technologies Used:** Java, Spring Boot, Maven, JavaParser, JGit, PostgreSQL, pgvector, Flyway, Google Gemini API, GitHub REST API, HTML, CSS, JavaScript, and Cytoscape.js.
