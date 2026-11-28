@@ -36,24 +36,36 @@ import com.example.repolens.dto.ParsedCode.ClassInfo;
 public class GraphService {
 
     // Lower rank = more "foundational"; used to break ties in the reading order
+    // Assign a rank to each layer, with ENTITY being the most foundational and TEST being the least. This is used to determine the order in which classes should be read in the reading order.
+    // An application architecture layer is a logical grouping of classes that share a common purpose or responsibility. For example, the ENTITY layer contains classes that represent the data model, while the CONTROLLER layer contains classes that handle HTTP requests. 
+    // ENTITY is the most foundational layer because it contains the data model that other layers build on. OTHER is a catch-all layer for classes that don't fit into any of the other layers. REPOSITORY is the layer that handles data access, while SERVICE contains business logic. CONFIG contains application setup and configuration, while COMPONENT contains supporting Spring components. CONTROLLER is the web entry point that handles HTTP requests, and TEST contains test classes.
     private static final Map<String, Integer> LAYER_RANK = Map.of(
             "ENTITY", 0, "OTHER", 1, "REPOSITORY", 2, "COMPONENT", 3,
             "SERVICE", 4, "CONFIG", 5, "CONTROLLER", 6, "TEST", 7);
 
     public GraphResult build(ParsedCode parsed) {
+        // Build a map of class names to ClassInfo objects for easy lookup. The ClassInfo object contains information about a class, such as its qualified name, simple name, layer, and dependencies. This map is used to build the graph of class dependencies.
+        /*
+            byName
+            │
+            ├── "com.example.OrderController"  →  ClassInfo for OrderController
+            │
+            ├── "com.example.OrderService"  →  ClassInfo for OrderService
+        */
+       // We use linked hash map to preserve the order of insertion, which is important for the reading order. The order of insertion is determined by the order in which the classes are parsed from the source code.
         Map<String, ClassInfo> byName = new LinkedHashMap<>();
         for (ClassInfo c : parsed.classes()) {
             byName.put(c.qualifiedName(), c);
         }
 
-        Map<String, String> interfaceImpls = interfaceImpls(byName);
-        Map<String, String> layers = layers(byName, interfaceImpls);
+        Map<String, String> interfaceImpls = interfaceImpls(byName);    // interface refers to the interface class, and implementation refers to the class that implements the interface. For example, if we have an interface called OrderService and a class called OrderServiceImpl that implements the interface, then the interfaceImpls map would contain an entry with the key "com.example.OrderService" and the value "com.example.OrderServiceImpl". This mapping is used to determine the layer of an interface based on its implementation.
+        Map<String, String> layers = layers(byName, interfaceImpls);    // layers refers to the architectural layer of a class, such as ENTITY, REPOSITORY, SERVICE, CONTROLLER, etc. The layers map is used to determine the layer of a class based on its qualified name. For example, if we have a class called OrderController that is in the CONTROLLER layer, then the layers map would contain an entry with the key "com.example.OrderController" and the value "CONTROLLER". This mapping is used to determine the layer of a class based on its qualified name.
 
         // Edges, plus adjacency lists of production code only
         List<Edge> edges = new ArrayList<>();
         Map<String, List<String>> adjacency = new LinkedHashMap<>();
-        Map<String, Integer> fanIn = new HashMap<>();
-        Map<String, Integer> fanOut = new HashMap<>();
+        Map<String, Integer> fanIn = new HashMap<>();                   // FanIn refers to the number of incoming edges to a class in the dependency graph. It is used to determine the number of classes that depend on a given class. For example, if we have a class called OrderService that is used by two other classes, then the fanIn map would contain an entry with the key "com.example.OrderService" and the value 2. This mapping is used to determine the number of classes that depend on a given class.
+        Map<String, Integer> fanOut = new HashMap<>();                  // FanOut refers to the number of outgoing edges from a class in the dependency graph. It is used to determine the number of classes that a given class depends on. For example, if we have a class called OrderService that depends on two other classes, then the fanOut map would contain an entry with the key "com.example.OrderService" and the value 2. This mapping is used to determine the number of classes that a given class depends on.
         List<String> productionClasses = new ArrayList<>();
 
         for (ClassInfo c : byName.values()) {
@@ -91,6 +103,8 @@ public class GraphService {
     // ---------------------------------------------------------------- interfaces and layers
 
     // Interfaces with exactly one production implementation
+    // The repository files are usually interfaces but also extend(inheritance) JPA
+    // , and the service files are usually implementations. The interfaceImpls map is used to determine the layer of an interface based on its implementation. For example, if we have an interface called OrderService and a class called OrderServiceImpl that implements the interface, then the interfaceImpls map would contain an entry with the key "com.example.OrderService" and the value "com.example.OrderServiceImpl". This mapping is used to determine the layer of an interface based on its implementation.
     private Map<String, String> interfaceImpls(Map<String, ClassInfo> byName) {
         Map<String, List<String>> implsOf = new HashMap<>();
         for (ClassInfo c : byName.values()) {
